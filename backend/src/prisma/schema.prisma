@@ -1,0 +1,192 @@
+// schema.prisma - Định nghĩa cấu trúc database
+// Tác giả: Nhóm HotelCarePortal
+// ORM: Prisma với PostgreSQL (Neon)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Vai trò người dùng
+enum Role {
+  GUEST        // Khách lưu trú
+  RECEPTIONIST // Lễ tân
+  STAFF        // Nhân viên dịch vụ
+  MANAGER      // Quản lý
+}
+
+// Trạng thái yêu cầu dịch vụ
+enum RequestStatus {
+  MOI           // Mới tạo, chưa xử lý
+  DA_PHAN_CONG  // Đã phân công cho nhân viên
+  DANG_XU_LY   // Nhân viên đang xử lý
+  HOAN_TAT      // Đã hoàn tất
+  DA_HUY        // Đã hủy
+}
+
+// Trạng thái khiếu nại / góp ý
+enum FeedbackStatus {
+  MOI          // Mới gửi
+  DANG_XU_LY  // Đang xem xét
+  DA_GIAI_QUYET // Đã giải quyết
+}
+
+// Loại feedback
+enum FeedbackType {
+  GOP_Y    // Góp ý thông thường
+  KHIEU_NAI // Khiếu nại
+}
+
+// Loại phòng
+enum RoomType {
+  STANDARD
+  DELUXE
+  SUITE
+  FAMILY
+}
+
+// Trạng thái phòng
+enum RoomStatus {
+  AVAILABLE   // Còn trống
+  OCCUPIED    // Đang có khách
+  MAINTENANCE // Đang bảo trì
+}
+
+// ===== 1. BẢNG USERS - Người dùng =====
+model User {
+  id            Int       @id @default(autoincrement())
+  full_name     String    @db.VarChar(100)
+  email         String    @unique @db.VarChar(150)
+  password_hash String
+  role          Role      @default(GUEST)
+  is_active     Boolean   @default(true)
+  created_at    DateTime  @default(now())
+
+  // Quan hệ
+  stays               Stay[]              // Các lần lưu trú (nếu là Guest)
+  assigned_requests   ServiceRequest[]    @relation("AssignedStaff") // Yêu cầu được phân công (nếu là Staff)
+  feedbacks           Feedback[]          @relation("GuestFeedback")  // Góp ý của khách
+  handled_feedbacks   Feedback[]          @relation("HandledBy")      // Phản hồi bởi Manager
+  request_history     RequestHistory[]    // Lịch sử thay đổi trạng thái
+  ratings             Rating[]            // Đánh giá dịch vụ
+
+  @@map("users")
+}
+
+// ===== 2. BẢNG ROOMS - Phòng khách sạn =====
+model Room {
+  id          Int        @id @default(autoincrement())
+  room_number String     @unique @db.VarChar(10)
+  floor       Int
+  type        RoomType
+  status      RoomStatus @default(AVAILABLE)
+
+  // Quan hệ
+  stays Stay[]
+
+  @@map("rooms")
+}
+
+// ===== 3. BẢNG STAYS - Lần lưu trú =====
+model Stay {
+  id         Int      @id @default(autoincrement())
+  guest_id   Int
+  room_id    Int
+  check_in   DateTime @db.Date
+  check_out  DateTime @db.Date
+
+  // Quan hệ
+  guest    User             @relation(fields: [guest_id], references: [id])
+  room     Room             @relation(fields: [room_id], references: [id])
+  requests ServiceRequest[]
+
+  @@map("stays")
+}
+
+// ===== 4. BẢNG SERVICE_CATEGORIES - Danh mục dịch vụ =====
+model ServiceCategory {
+  id          Int    @id @default(autoincrement())
+  name        String @db.VarChar(100)
+  description String?
+
+  // Quan hệ
+  service_requests ServiceRequest[]
+
+  @@map("service_categories")
+}
+
+// ===== 5. BẢNG SERVICE_REQUESTS - Yêu cầu dịch vụ =====
+model ServiceRequest {
+  id           Int           @id @default(autoincrement())
+  stay_id      Int
+  category_id  Int
+  content      String        // Nội dung yêu cầu
+  status       RequestStatus @default(MOI)
+  assigned_to  Int?          // ID nhân viên được phân công
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+  completed_at DateTime?     // Thời điểm hoàn tất
+
+  // Quan hệ
+  stay     Stay            @relation(fields: [stay_id], references: [id])
+  category ServiceCategory @relation(fields: [category_id], references: [id])
+  staff    User?           @relation("AssignedStaff", fields: [assigned_to], references: [id])
+  history  RequestHistory[]
+  rating   Rating?
+
+  @@map("service_requests")
+}
+
+// ===== 6. BẢNG REQUEST_HISTORY - Lịch sử thay đổi trạng thái =====
+model RequestHistory {
+  id          Int           @id @default(autoincrement())
+  request_id  Int
+  old_status  RequestStatus?
+  new_status  RequestStatus
+  changed_by  Int           // ID người thay đổi
+  changed_at  DateTime      @default(now())
+
+  // Quan hệ
+  request    ServiceRequest @relation(fields: [request_id], references: [id])
+  changed_by_user User      @relation(fields: [changed_by], references: [id])
+
+  @@map("request_history")
+}
+
+// ===== 7. BẢNG FEEDBACKS - Góp ý và Khiếu nại =====
+model Feedback {
+  id          Int            @id @default(autoincrement())
+  guest_id    Int
+  type        FeedbackType
+  content     String         // Nội dung góp ý / khiếu nại
+  status      FeedbackStatus @default(MOI)
+  response    String?        // Phản hồi từ quản lý
+  handled_by  Int?           // ID Manager xử lý
+  created_at  DateTime       @default(now())
+
+  // Quan hệ
+  guest      User  @relation("GuestFeedback", fields: [guest_id], references: [id])
+  handler    User? @relation("HandledBy", fields: [handled_by], references: [id])
+
+  @@map("feedbacks")
+}
+
+// ===== 8. BẢNG RATINGS - Đánh giá sau dịch vụ =====
+model Rating {
+  id         Int      @id @default(autoincrement())
+  request_id Int      @unique // Mỗi yêu cầu chỉ có 1 đánh giá
+  guest_id   Int
+  score      Int      // 1-5 sao
+  comment    String?
+  created_at DateTime @default(now())
+
+  // Quan hệ
+  request ServiceRequest @relation(fields: [request_id], references: [id])
+  guest   User           @relation(fields: [guest_id], references: [id])
+
+  @@map("ratings")
+}

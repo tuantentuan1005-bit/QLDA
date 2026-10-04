@@ -1,0 +1,10 @@
+/* index.css - Import Tailwind CSS v4 */
+@import "tailwindcss";
+
+/* Font mặc định của dự án */
+@layer base {
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    @apply bg-gray-50 text-gray-900;
+  }
+}
