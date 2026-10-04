@@ -1,30 +1,44 @@
 // AuthContext.jsx - Quản lý trạng thái xác thực toàn ứng dụng
-// Dùng React Context để chia sẻ thông tin user cho mọi component
+// HCP-29: login, logout, kiểm tra token khi reload
 
 import { createContext, useContext, useState, useEffect } from 'react';
+import { getMeApi } from '../services/auth.service';
 
-// Tạo Context
 const AuthContext = createContext(null);
 
-// Provider bao bọc toàn bộ app
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true); // Kiểm tra token ban đầu
+  const [loading, setLoading] = useState(true); // Đang kiểm tra token ban đầu
 
-  // Khi app khởi động, kiểm tra xem có token lưu sẵn không
+  // Khi app khởi động: kiểm tra token trong localStorage còn hợp lệ không
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
+    const verifyToken = async () => {
+      const savedToken = localStorage.getItem('token');
+      if (!savedToken) {
+        setLoading(false);
+        return;
+      }
 
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+      try {
+        // Gọi API /auth/me để xác thực token với backend
+        // (tránh trường hợp token giả mạo hoặc user bị khóa)
+        const userData = await getMeApi();
+        setToken(savedToken);
+        setUser(userData);
+      } catch {
+        // Token hết hạn hoặc không hợp lệ → xóa đi
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verifyToken();
   }, []);
 
-  // Hàm đăng nhập: lưu token và thông tin user
+  // Lưu thông tin sau khi đăng nhập thành công
   const login = (userData, jwtToken) => {
     setUser(userData);
     setToken(jwtToken);
@@ -32,7 +46,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
-  // Hàm đăng xuất: xóa toàn bộ thông tin
+  // Xóa toàn bộ thông tin khi đăng xuất
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -40,19 +54,19 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('user');
   };
 
-  // Kiểm tra xem user có quyền cụ thể không
-  const hasRole = (role) => user?.role === role;
+  // Kiểm tra user có vai trò cụ thể không
+  const hasRole = (...roles) => roles.includes(user?.role);
 
   const value = { user, token, loading, login, logout, hasRole };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// Custom hook để dùng context dễ hơn
+// Custom hook — dùng thay vì useContext(AuthContext) trực tiếp
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth phải dùng bên trong AuthProvider');
+    throw new Error('useAuth phải được dùng bên trong AuthProvider');
   }
   return context;
 }

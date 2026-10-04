@@ -7,18 +7,48 @@ import { useAuth } from './context/AuthContext';
 // Import các trang (sẽ thêm dần ở các bước sau)
 import LoginPage from './pages/LoginPage';
 
-// Component placeholder đơn giản cho các dashboard
+import Navbar from './components/layout/Navbar';
+
+// Component layout cơ bản cho các dashboard có thanh Navbar
+function DashboardLayout({ title, icon, description }) {
+  const { user } = useAuth();
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Navbar />
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-3xl">{icon}</span>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
+              <p className="text-gray-500 text-sm">{description}</p>
+            </div>
+          </div>
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+            <p className="text-sm text-blue-900 font-medium">
+              👋 Xin chào, <span className="font-semibold">{user?.full_name}</span> ({user?.email})!
+            </p>
+            <p className="text-xs text-blue-700 mt-1">
+              Bạn đang đăng nhập với quyền: <span className="font-semibold uppercase tracking-wider">{user?.role}</span>
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 function GuestDashboard() {
-  return <div className="p-8 text-xl">🛎️ Dashboard Khách - đang xây dựng...</div>;
+  return <DashboardLayout title="Cổng Khách Lưu Trú" icon="🛎️" description="Gửi yêu cầu dịch vụ, theo dõi tiến độ và gửi góp ý" />;
 }
 function ReceptionistDashboard() {
-  return <div className="p-8 text-xl">🏨 Dashboard Lễ tân - đang xây dựng...</div>;
+  return <DashboardLayout title="Bàn Tiếp Nhận Lễ Tân" icon="🏨" description="Tiếp nhận, phân công và quản lý trạng thái yêu cầu dịch vụ" />;
 }
 function StaffDashboard() {
-  return <div className="p-8 text-xl">🔧 Dashboard Nhân viên - đang xây dựng...</div>;
+  return <DashboardLayout title="Cổng Nhân Viên Dịch Vụ" icon="🔧" description="Xử lý công việc được phân công và cập nhật tiến độ" />;
 }
 function ManagerDashboard() {
-  return <div className="p-8 text-xl">📊 Dashboard Quản lý - đang xây dựng...</div>;
+  return <DashboardLayout title="Bảng Điều Khiển Quản Lý" icon="📊" description="Giám sát hoạt động, xử lý khiếu nại và xem báo cáo thống kê" />;
 }
 
 // ===== ROUTE BẢO VỆ THEO VAI TRÒ =====
