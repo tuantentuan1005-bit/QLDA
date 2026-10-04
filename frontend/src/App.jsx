@@ -1,84 +1,53 @@
-// App.jsx - Định nghĩa routing chính của ứng dụng
-// Dùng React Router v6 với route bảo vệ theo vai trò
-
+// App.jsx - Hệ thống định tuyến toàn ứng dụng HotelCarePortal
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import AppLayout from './components/layout/AppLayout';
+import Spinner from './components/ui/Spinner';
 
-// Import các trang (sẽ thêm dần ở các bước sau)
+// Trang công khai
 import LoginPage from './pages/LoginPage';
 
-import Navbar from './components/layout/Navbar';
+// Các trang Khách lưu trú (Guest)
+import GuestOverviewPage from './pages/guest/GuestOverviewPage';
+import NewRequestPage from './pages/guest/NewRequestPage';
+import GuestRequestsPage from './pages/guest/GuestRequestsPage';
+import RequestDetailPage from './pages/guest/RequestDetailPage';
+import GuestFeedbacksPage from './pages/guest/GuestFeedbacksPage';
 
-// Component layout cơ bản cho các dashboard có thanh Navbar
-function DashboardLayout({ title, icon, description }) {
-  const { user } = useAuth();
-  return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Navbar />
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-3xl">{icon}</span>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
-              <p className="text-gray-500 text-sm">{description}</p>
-            </div>
-          </div>
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-            <p className="text-sm text-blue-900 font-medium">
-              👋 Xin chào, <span className="font-semibold">{user?.full_name}</span> ({user?.email})!
-            </p>
-            <p className="text-xs text-blue-700 mt-1">
-              Bạn đang đăng nhập với quyền: <span className="font-semibold uppercase tracking-wider">{user?.role}</span>
-            </p>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-}
+// Các trang Lễ tân (Receptionist)
+import ReceptionistPage from './pages/receptionist/ReceptionistPage';
 
-function GuestDashboard() {
-  return <DashboardLayout title="Cổng Khách Lưu Trú" icon="🛎️" description="Gửi yêu cầu dịch vụ, theo dõi tiến độ và gửi góp ý" />;
-}
-function ReceptionistDashboard() {
-  return <DashboardLayout title="Bàn Tiếp Nhận Lễ Tân" icon="🏨" description="Tiếp nhận, phân công và quản lý trạng thái yêu cầu dịch vụ" />;
-}
-function StaffDashboard() {
-  return <DashboardLayout title="Cổng Nhân Viên Dịch Vụ" icon="🔧" description="Xử lý công việc được phân công và cập nhật tiến độ" />;
-}
-function ManagerDashboard() {
-  return <DashboardLayout title="Bảng Điều Khiển Quản Lý" icon="📊" description="Giám sát hoạt động, xử lý khiếu nại và xem báo cáo thống kê" />;
-}
+// Các trang Nhân viên (Staff)
+import StaffPage from './pages/staff/StaffPage';
 
-// ===== ROUTE BẢO VỆ THEO VAI TRÒ =====
-// Kiểm tra user đã đăng nhập và có đúng vai trò không
-function PrivateRoute({ children, allowedRoles }) {
+// Các trang Quản lý (Manager)
+import ManagerDashboardPage from './pages/manager/ManagerDashboardPage';
+import UserManagementPage from './pages/manager/UserManagementPage';
+import ManagerFeedbacksPage from './pages/manager/ManagerFeedbacksPage';
+
+// Tuyến đường bảo vệ theo vai trò RBAC
+function ProtectedRoute({ children, allowedRoles }) {
   const { user, loading } = useAuth();
 
-  // Đang kiểm tra token từ localStorage
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <Spinner fullPage text="Đang xác thực quyền truy cập..." />;
   }
 
-  // Chưa đăng nhập → chuyển về login
+  // Chưa đăng nhập -> quay về trang login
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // Không có quyền → chuyển về trang phù hợp với vai trò
+  // Sai vai trò -> điều hướng về trang chủ của vai trò đó
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to={getRoleHomePath(user.role)} replace />;
   }
 
-  return children;
+  return <AppLayout>{children}</AppLayout>;
 }
 
-// Trả về đường dẫn trang chủ theo vai trò
+// Đường dẫn mặc định của từng vai trò
 function getRoleHomePath(role) {
   const paths = {
     GUEST: '/guest',
@@ -89,59 +58,111 @@ function getRoleHomePath(role) {
   return paths[role] || '/login';
 }
 
-// ===== REDIRECT TỰ ĐỘNG SAU ĐĂNG NHẬP =====
 function HomeRedirect() {
   const { user, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return <Spinner fullPage />;
   if (!user) return <Navigate to="/login" replace />;
   return <Navigate to={getRoleHomePath(user.role)} replace />;
 }
 
-// ===== ĐỊNH NGHĨA ROUTES =====
 export default function App() {
   return (
     <Routes>
-      {/* Trang gốc: tự redirect theo vai trò */}
+      {/* Trang gốc */}
       <Route path="/" element={<HomeRedirect />} />
 
-      {/* Trang đăng nhập (public) */}
+      {/* Đăng nhập */}
       <Route path="/login" element={<LoginPage />} />
 
-      {/* Routes bảo vệ theo vai trò */}
+      {/* ===== GUEST (Khách lưu trú) ===== */}
       <Route
-        path="/guest/*"
+        path="/guest"
         element={
-          <PrivateRoute allowedRoles={['GUEST']}>
-            <GuestDashboard />
-          </PrivateRoute>
+          <ProtectedRoute allowedRoles={['GUEST']}>
+            <GuestOverviewPage />
+          </ProtectedRoute>
         }
       />
       <Route
-        path="/receptionist/*"
+        path="/guest/requests"
         element={
-          <PrivateRoute allowedRoles={['RECEPTIONIST']}>
-            <ReceptionistDashboard />
-          </PrivateRoute>
+          <ProtectedRoute allowedRoles={['GUEST']}>
+            <GuestRequestsPage />
+          </ProtectedRoute>
         }
       />
       <Route
-        path="/staff/*"
+        path="/guest/requests/new"
         element={
-          <PrivateRoute allowedRoles={['STAFF']}>
-            <StaffDashboard />
-          </PrivateRoute>
+          <ProtectedRoute allowedRoles={['GUEST']}>
+            <NewRequestPage />
+          </ProtectedRoute>
         }
       />
       <Route
-        path="/manager/*"
+        path="/guest/requests/:id"
         element={
-          <PrivateRoute allowedRoles={['MANAGER', 'RECEPTIONIST']}>
-            <ManagerDashboard />
-          </PrivateRoute>
+          <ProtectedRoute allowedRoles={['GUEST']}>
+            <RequestDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/guest/feedbacks"
+        element={
+          <ProtectedRoute allowedRoles={['GUEST']}>
+            <GuestFeedbacksPage />
+          </ProtectedRoute>
         }
       />
 
-      {/* 404 - không tìm thấy trang */}
+      {/* ===== RECEPTIONIST (Lễ tân) ===== */}
+      <Route
+        path="/receptionist"
+        element={
+          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'MANAGER']}>
+            <ReceptionistPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ===== STAFF (Nhân viên dịch vụ) ===== */}
+      <Route
+        path="/staff"
+        element={
+          <ProtectedRoute allowedRoles={['STAFF', 'MANAGER']}>
+            <StaffPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ===== MANAGER (Quản lý) ===== */}
+      <Route
+        path="/manager"
+        element={
+          <ProtectedRoute allowedRoles={['MANAGER']}>
+            <ManagerDashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manager/users"
+        element={
+          <ProtectedRoute allowedRoles={['MANAGER']}>
+            <UserManagementPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manager/feedbacks"
+        element={
+          <ProtectedRoute allowedRoles={['MANAGER']}>
+            <ManagerFeedbacksPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 404 Điều hướng lại */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

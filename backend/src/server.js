@@ -1,6 +1,4 @@
 // server.js - Điểm khởi động của backend HotelCarePortal
-// Cấu hình Express, middleware, routes
-
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -12,26 +10,27 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ===== MIDDLEWARE TOÀN CỤC =====
-
-// Cho phép CORS từ frontend (Vite dev hoặc Vercel)
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
 }));
 
-// Parse JSON body
 app.use(express.json());
 
-// ===== ROUTES =====
-const authRoutes = require('./routes/auth.routes');
-// Các routes khác sẽ được thêm dần theo từng HCP story
-// const userRoutes = require('./routes/user.routes');       // HCP-30
-// const requestRoutes = require('./routes/request.routes'); // HCP-31..34
-// const feedbackRoutes = require('./routes/feedback.routes'); // HCP-35..36
-// const ratingRoutes = require('./routes/rating.routes');   // HCP-37
-// const dashboardRoutes = require('./routes/dashboard.routes'); // HCP-38
+// ===== IMPORT VÀ GẮN ROUTERS THEO STORY JIRA =====
+const authRoutes = require('./routes/auth.routes');         // HCP-29
+const userRoutes = require('./routes/user.routes');         // HCP-30
+const requestRoutes = require('./routes/request.routes');   // HCP-31, 32, 33, 34
+const feedbackRoutes = require('./routes/feedback.routes'); // HCP-35, 36
+const ratingRoutes = require('./routes/rating.routes');     // HCP-37
+const dashboardRoutes = require('./routes/dashboard.routes'); // HCP-38
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/requests', requestRoutes);
+app.use('/api/feedbacks', feedbackRoutes);
+app.use('/api/ratings', ratingRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Health check — kiểm tra server hoạt động
 app.get('/api/health', (req, res) => {
