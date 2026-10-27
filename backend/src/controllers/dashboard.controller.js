@@ -133,10 +133,11 @@ const exportRequestsCsv = async (req, res) => {
         stay: {
           include: {
             room: true,
-            guest: true,
+            // Chỉ lấy thông tin cần thiết, không lấy password_hash
+            guest: { select: { id: true, full_name: true, email: true } },
           },
         },
-        staff: true,
+        staff: { select: { id: true, full_name: true, email: true } },
         rating: true,
       },
       orderBy: { id: 'desc' },
