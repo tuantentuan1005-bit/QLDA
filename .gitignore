@@ -25,9 +25,14 @@ backend/src/prisma/migrations/
 # Editor
 .vscode/
 .idea/
+.vs/
 *.suo
 *.ntvs*
 *.njsproj
+
+# Database backups (không commit dữ liệu backup lên git)
+backend/backups/*.sql
+backend/backups/*.dump
 
 # OS
 .DS_Store
