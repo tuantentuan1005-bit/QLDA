@@ -53,10 +53,14 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Lỗi máy chủ nội bộ. Vui lòng thử lại sau.' });
 });
 
-// ===== KHỞI ĐỘNG SERVER =====
-app.listen(PORT, () => {
-  console.log(`🚀 Server đang chạy tại http://localhost:${PORT}`);
-  console.log(`📝 Môi trường: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔐 JWT_SECRET: ${process.env.JWT_SECRET ? '✅ Đã cấu hình' : '❌ Chưa cấu hình!'}`);
-  console.log(`🗄️  DATABASE: ${process.env.DATABASE_URL ? '✅ Đã cấu hình' : '❌ Chưa cấu hình!'}`);
-});
+// ===== KHỞI ĐỘNG SERVER (chỉ listen khi chạy trực tiếp, không listen khi chạy Jest test) =====
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server đang chạy tại http://localhost:${PORT}`);
+    console.log(`📝 Môi trường: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔐 JWT_SECRET: ${process.env.JWT_SECRET ? '✅ Đã cấu hình' : '❌ Chưa cấu hình!'}`);
+    console.log(`🗄️  DATABASE: ${process.env.DATABASE_URL ? '✅ Đã cấu hình' : '❌ Chưa cấu hình!'}`);
+  });
+}
+
+module.exports = app;
