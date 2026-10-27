@@ -65,6 +65,14 @@ const createRequest = async (req, res) => {
   const guestId = req.user.id;
 
   try {
+    // Kiểm tra loại dịch vụ có tồn tại không trước khi tạo yêu cầu
+    const category = await prisma.serviceCategory.findUnique({
+      where: { id: parseInt(category_id) },
+    });
+    if (!category) {
+      return res.status(400).json({ message: 'Loại dịch vụ không tồn tại trong hệ thống.' });
+    }
+
     // Tìm đợt lưu trú (stay) của khách
     let stay = await prisma.stay.findFirst({
       where: { guest_id: guestId },
